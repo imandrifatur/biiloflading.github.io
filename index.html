@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pelacakan Tangki BBM Truk</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -25,6 +26,10 @@
             margin-bottom: 15px;
         }
         table {
+            margin-top: 20px;
+        }
+        #map {
+            height: 400px; /* Ukuran peta */
             margin-top: 20px;
         }
     </style>
@@ -53,6 +58,8 @@
             <button id="stopTracking" class="btn btn-danger mt-2" onclick="stopTracking()">Hentikan Lacak Lokasi</button>
         </div>
 
+        <div id="map"></div>
+
         <table class="table table-bordered mt-4">
             <thead>
                 <tr>
@@ -65,10 +72,13 @@
         </table>
     </div>
 
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
         let watchId;
         let lastPosition = null;
         let totalDistance = 0;
+        let map;
+        let marker;
 
         // Fungsi untuk menyimpan data ke localStorage
         function saveData() {
@@ -148,11 +158,27 @@
             }
 
             lastPosition = { latitude, longitude, timestamp: position.timestamp };
+
+            // Update marker pada peta
+            if (marker) {
+                marker.setLatLng([latitude, longitude]);
+            } else {
+                marker = L.marker([latitude, longitude]).addTo(map);
+            }
+
+            // Pindahkan peta ke posisi marker
+            map.setView([latitude, longitude], 15);
         }
 
         // Fungsi untuk mulai melacak lokasi
         function startTracking() {
             if (navigator.geolocation) {
+                map = L.map('map').setView([0, 0], 2); // Set peta ke default view
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+
                 watchId = navigator.geolocation.watchPosition(updateLocation, (error) => {
                     console.error(error);
                 }, {
@@ -172,6 +198,7 @@
                 watchId = null;
                 lastPosition = null;
                 totalDistance = 0;
+                marker = null;
                 document.getElementById('locationInfo').textContent = "Pelacakan dihentikan.";
                 document.getElementById('distanceInfo').textContent = "Jarak Ditempuh: 0 km";
                 document.getElementById('speedInfo').textContent = "Kecepatan: 0 km/jam";
