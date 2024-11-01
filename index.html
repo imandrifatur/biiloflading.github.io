@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill of Lading</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <style>
+       body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    padding: 20px;
+    margin: 0; /* Menghapus margin default */
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.table {
+    margin-top: 20px;
+    border-collapse: collapse;
+    width: 100%; /* Membuat tabel mengisi lebar kontainer */
+}
+
+.table th, .table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    word-wrap: break-word; /* Memungkinkan teks panjang untuk terputus */
+}
+
+.table th {
+    background-color: #007bff;
+    color: white;
+}
+
+.form-control {
+    margin-bottom: 10px;
+    width: 100%; /* Membuat input mengisi lebar kontainer */
+    box-sizing: border-box; /* Memastikan padding tidak menambah lebar */
+}
+
+@media (max-width: 576px) {
+    .form-control {
+        font-size: 14px; /* Mengatur ukuran font untuk input di perangkat kecil */
+    }
+    
+    h1 {
+        font-size: 20px; /* Mengurangi ukuran font judul */
+    }
+    
+    .table th, .table td {
+        padding: 5px; /* Mengurangi padding untuk sel di perangkat kecil */
+        font-size: 12px; /* Mengurangi ukuran font untuk tabel */
+    }
+}
+
+    </style>
+</head>
+<body>
+
+    <h1>Bill of Lading</h1>
+
+    <div class="container">
+        <form id="bolForm">
+            <div class="form-group">
+                <label for="senderName">Nama Pengirim:</label>
+                <input type="text" class="form-control" id="senderName" required>
+            </div>
+            <div class="form-group">
+                <label for="receiverName">Nama Penerima:</label>
+                <input type="text" class="form-control" id="receiverName" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Deskripsi Barang:</label>
+                <input type="text" class="form-control" id="description" required>
+            </div>
+            <div class="form-group">
+                <label for="quantity">Jumlah:</label>
+                <input type="number" class="form-control" id="quantity" required>
+            </div>
+            <div class="form-group">
+                <label for="weight">Berat (kg):</label>
+                <input type="number" class="form-control" id="weight" required>
+            </div>
+            <div class="form-group">
+                <label for="route">Rute Pengiriman:</label>
+                <input type="text" class="form-control" id="route" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Tambah</button>
+            <button type="button" class="btn btn-secondary" id="cancelButton">Batal</button>
+        </form>
+        <br>
+
+        <table id="bolTable" class="table table-bordered table-striped" style="width:100%">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Pengirim</th>
+                    <th>Penerima</th>
+                    <th>Deskripsi</th>
+                    <th>Jumlah</th>
+                    <th>Berat (kg)</th>
+                    <th>Rute</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="bolList"></tbody>
+        </table>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            const bolTable = $('#bolTable').DataTable();
+            let editIndex = -1;
+            let nextId = 1;
+
+            // Load data from local storage on page load
+            loadBOLFromLocalStorage();
+
+            $('#bolForm').on('submit', function(event) {
+                event.preventDefault();
+                const bol = {
+                    id: nextId++,
+                    sender: $('#senderName').val(),
+                    receiver: $('#receiverName').val(),
+                    description: $('#description').val(),
+                    quantity: $('#quantity').val(),
+                    weight: $('#weight').val(),
+                    route: $('#route').val()
+                };
+                if (editIndex === -1) {
+                    saveBOL(bol);
+                    addBOLToTable(bol);
+                } else {
+                    updateBOL(editIndex, bol);
+                }
+                clearInputs();
+            });
+
+            $('#cancelButton').on('click', function() {
+                clearInputs();
+            });
+
+            function saveBOL(bol) {
+                const bolList = getBOLFromLocalStorage();
+                bolList.push(bol);
+                localStorage.setItem('bolList', JSON.stringify(bolList));
+            }
+
+            function addBOLToTable(bol) {
+                const rowNode = bolTable.row.add([
+                    bol.id,
+                    bol.sender,
+                    bol.receiver,
+                    bol.description,
+                    bol.quantity,
+                    bol.weight,
+                    bol.route,
+                    `<button class="btn btn-warning btn-sm" onclick="editBOL(${bol.id})">Edit</button>
+                     <button class="btn btn-danger btn-sm" onclick="deleteBOL(${bol.id})">Hapus</button>
+                     <button class="btn btn-success btn-sm" onclick="printBOL(${bol.id})">Print</button>`
+                ]).draw(false).node();
+                $(rowNode).attr('data-index', bolTable.rows().count() - 1);
+            }
+
+            window.editBOL = function(id) {
+                const row = bolTable.row((index, data, node) => {
+                    return data[0] == id; // Match by ID
+                });
+                const rowData = row.data();
+                editIndex = row.index();
+                $('#senderName').val(rowData[1]);
+                $('#receiverName').val(rowData[2]);
+                $('#description').val(rowData[3]);
+                $('#quantity').val(rowData[4]);
+                $('#weight').val(rowData[5]);
+                $('#route').val(rowData[6]);
+            }
+
+            function updateBOL(index, bol) {
+                bolTable.row(index).data([
+                    bol.id,
+                    bol.sender,
+                    bol.receiver,
+                    bol.description,
+                    bol.quantity,
+                    bol.weight,
+                    bol.route,
+                    `<button class="btn btn-warning btn-sm" onclick="editBOL(${bol.id})">Edit</button>
+                     <button class="btn btn-danger btn-sm" onclick="deleteBOL(${bol.id})">Hapus</button>
+                     <button class="btn btn-success btn-sm" onclick="printBOL(${bol.id})">Print</button>`
+                ]).draw(false);
+                updateLocalStorage();
+                editIndex = -1;
+            }
+
+            window.deleteBOL = function(id) {
+                bolTable.rows((index, data) => {
+                    return data[0] == id; // Match by ID
+                }).remove().draw();
+                updateLocalStorage();
+            }
+
+            function updateLocalStorage() {
+                const bolList = [];
+                $('#bolTable tbody tr').each(function() {
+                    const row = $(this).children('td');
+                    const bol = {
+                        id: row[0].innerText,
+                        sender: row[1].innerText,
+                        receiver: row[2].innerText,
+                        description: row[3].innerText,
+                        quantity: row[4].innerText,
+                        weight: row[5].innerText,
+                        route: row[6].innerText
+                    };
+                    bolList.push(bol);
+                });
+                localStorage.setItem('bolList', JSON.stringify(bolList));
+            }
+
+            function getBOLFromLocalStorage() {
+                return JSON.parse(localStorage.getItem('bolList')) || [];
+            }
+
+            function clearInputs() {
+                $('#senderName').val('');
+                $('#receiverName').val('');
+                $('#description').val('');
+                $('#quantity').val('');
+                $('#weight').val('');
+                $('#route').val('');
+            }
+
+            function loadBOLFromLocalStorage() {
+                const bolList = getBOLFromLocalStorage();
+                bolList.forEach(bol => {
+                    addBOLToTable(bol);
+                });
+                nextId = bolList.length ? Math.max(...bolList.map(b => b.id)) + 1 : 1; // Update next ID
+            }
+
+        window.printBOL = function(id) {
+    const bol = getBOLFromLocalStorage().find(b => b.id == id);
+    if (bol) {
+        // Generate QR Code URL (you may need a library for QR code generation)
+        const qrCodeURL = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(JSON.stringify(bol))}&size=100x100`;
+
+        let printContent = `
+        <div style="text-align: center; font-family: Arial, sans-serif; font-size: 14px; border: 1px solid #ccc; padding: 20px; width: 300px; margin: auto;">
+            <h2 style="margin-bottom: 10px;">Bill of Lading</h2>
+            <hr>
+            <p><strong>ID:</strong> ${bol.id}</p>
+            <p><strong>Pengirim:</strong> ${bol.sender}</p>
+            <p><strong>Penerima:</strong> ${bol.receiver}</p>
+            <p><strong>Deskripsi Barang:</strong> ${bol.description}</p>
+            <p><strong>Jumlah:</strong> ${bol.quantity}</p>
+            <p><strong>Berat:</strong> ${bol.weight} kg</p>
+            <p><strong>Rute Pengiriman:</strong> ${bol.route}</p>
+            <hr>
+            <img src="${qrCodeURL}" alt="QR Code" style="margin: 10px 0;">
+            <p style="font-size: 12px;">Tanggal: ${new Date().toLocaleDateString()}</p>
+            <p style="font-size: 12px;">Waktu: ${new Date().toLocaleTimeString()}</p>
+            <p style="font-size: 12px;">Terima kasih telah menggunakan layanan kami!</p>
+        </div>`;
+
+        const win = window.open('', '', 'width=350,height=400');
+        win.document.write(printContent);
+        win.document.close();
+        win.print();
+    }
+            }
+        });
+    </script>
+</body>
+</html>
