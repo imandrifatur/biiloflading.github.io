@@ -1,283 +1,185 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bill of Lading</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <title>Pelacakan Tangki BBM Truk</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
-       body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    padding: 20px;
-    margin: 0; /* Menghapus margin default */
-}
-
-h1 {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.table {
-    margin-top: 20px;
-    border-collapse: collapse;
-    width: 100%; /* Membuat tabel mengisi lebar kontainer */
-}
-
-.table th, .table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-    word-wrap: break-word; /* Memungkinkan teks panjang untuk terputus */
-}
-
-.table th {
-    background-color: #007bff;
-    color: white;
-}
-
-.form-control {
-    margin-bottom: 10px;
-    width: 100%; /* Membuat input mengisi lebar kontainer */
-    box-sizing: border-box; /* Memastikan padding tidak menambah lebar */
-}
-
-@media (max-width: 576px) {
-    .form-control {
-        font-size: 14px; /* Mengatur ukuran font untuk input di perangkat kecil */
-    }
-    
-    h1 {
-        font-size: 20px; /* Mengurangi ukuran font judul */
-    }
-    
-    .table th, .table td {
-        padding: 5px; /* Mengurangi padding untuk sel di perangkat kecil */
-        font-size: 12px; /* Mengurangi ukuran font untuk tabel */
-    }
-}
-
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        table {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-
-    <h1>Bill of Lading</h1>
-
     <div class="container">
-        <form id="bolForm">
+        <h2>Pelacakan Tangki BBM Truk</h2>
+        <form id="tankForm">
             <div class="form-group">
-                <label for="senderName">Nama Pengirim:</label>
-                <input type="text" class="form-control" id="senderName" required>
+                <label for="truckId">ID Truk</label>
+                <input type="text" id="truckId" class="form-control" placeholder="Masukkan ID Truk" required>
             </div>
             <div class="form-group">
-                <label for="receiverName">Nama Penerima:</label>
-                <input type="text" class="form-control" id="receiverName" required>
+                <label for="fuelAmount">Jumlah BBM (Liter)</label>
+                <input type="number" id="fuelAmount" class="form-control" placeholder="Masukkan Jumlah BBM" required>
             </div>
-            <div class="form-group">
-                <label for="description">Deskripsi Barang:</label>
-                <input type="text" class="form-control" id="description" required>
-            </div>
-            <div class="form-group">
-                <label for="quantity">Jumlah:</label>
-                <input type="number" class="form-control" id="quantity" required>
-            </div>
-            <div class="form-group">
-                <label for="weight">Berat (kg):</label>
-                <input type="number" class="form-control" id="weight" required>
-            </div>
-            <div class="form-group">
-                <label for="route">Rute Pengiriman:</label>
-                <input type="text" class="form-control" id="route" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Tambah</button>
-            <button type="button" class="btn btn-secondary" id="cancelButton">Batal</button>
+            <button type="submit" class="btn btn-primary">Tambah Data</button>
         </form>
-        <br>
 
-        <table id="bolTable" class="table table-bordered table-striped" style="width:100%">
+        <div class="mt-4">
+            <h4>Live Location</h4>
+            <div id="locationInfo">Menunggu lokasi...</div>
+            <div id="distanceInfo">Jarak Ditempuh: 0 km</div>
+            <div id="speedInfo">Kecepatan: 0 km/jam</div>
+            <button id="startTracking" class="btn btn-secondary mt-2" onclick="startTracking()">Mulai Lacak Lokasi</button>
+            <button id="stopTracking" class="btn btn-danger mt-2" onclick="stopTracking()">Hentikan Lacak Lokasi</button>
+        </div>
+
+        <table class="table table-bordered mt-4">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Pengirim</th>
-                    <th>Penerima</th>
-                    <th>Deskripsi</th>
-                    <th>Jumlah</th>
-                    <th>Berat (kg)</th>
-                    <th>Rute</th>
+                    <th>ID Truk</th>
+                    <th>Jumlah BBM (Liter)</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
-            <tbody id="bolList"></tbody>
+            <tbody id="tankTableBody"></tbody>
         </table>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-
     <script>
-        $(document).ready(function() {
-            const bolTable = $('#bolTable').DataTable();
-            let editIndex = -1;
-            let nextId = 1;
+        let watchId;
+        let lastPosition = null;
+        let totalDistance = 0;
 
-            // Load data from local storage on page load
-            loadBOLFromLocalStorage();
+        // Fungsi untuk menyimpan data ke localStorage
+        function saveData() {
+            const tankData = JSON.parse(localStorage.getItem('tankData')) || [];
+            const truckId = document.getElementById('truckId').value;
+            const fuelAmount = document.getElementById('fuelAmount').value;
+            tankData.push({ truckId, fuelAmount });
+            localStorage.setItem('tankData', JSON.stringify(tankData));
+            displayData();
+        }
 
-            $('#bolForm').on('submit', function(event) {
-                event.preventDefault();
-                const bol = {
-                    id: nextId++,
-                    sender: $('#senderName').val(),
-                    receiver: $('#receiverName').val(),
-                    description: $('#description').val(),
-                    quantity: $('#quantity').val(),
-                    weight: $('#weight').val(),
-                    route: $('#route').val()
-                };
-                if (editIndex === -1) {
-                    saveBOL(bol);
-                    addBOLToTable(bol);
-                } else {
-                    updateBOL(editIndex, bol);
-                }
-                clearInputs();
+        // Fungsi untuk menampilkan data dari localStorage ke tabel
+        function displayData() {
+            const tankData = JSON.parse(localStorage.getItem('tankData')) || [];
+            const tankTableBody = document.getElementById('tankTableBody');
+            tankTableBody.innerHTML = '';
+            tankData.forEach((data, index) => {
+                const row = `
+                    <tr>
+                        <td>${data.truckId}</td>
+                        <td>${data.fuelAmount}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" onclick="deleteData(${index})">Hapus</button>
+                        </td>
+                    </tr>
+                `;
+                tankTableBody.innerHTML += row;
             });
+        }
 
-            $('#cancelButton').on('click', function() {
-                clearInputs();
-            });
+        // Fungsi untuk menghapus data dari localStorage
+        function deleteData(index) {
+            const tankData = JSON.parse(localStorage.getItem('tankData'));
+            tankData.splice(index, 1);
+            localStorage.setItem('tankData', JSON.stringify(tankData));
+            displayData();
+        }
 
-            function saveBOL(bol) {
-                const bolList = getBOLFromLocalStorage();
-                bolList.push(bol);
-                localStorage.setItem('bolList', JSON.stringify(bolList));
-            }
-
-            function addBOLToTable(bol) {
-                const rowNode = bolTable.row.add([
-                    bol.id,
-                    bol.sender,
-                    bol.receiver,
-                    bol.description,
-                    bol.quantity,
-                    bol.weight,
-                    bol.route,
-                    `<button class="btn btn-warning btn-sm" onclick="editBOL(${bol.id})">Edit</button>
-                     <button class="btn btn-danger btn-sm" onclick="deleteBOL(${bol.id})">Hapus</button>
-                     <button class="btn btn-success btn-sm" onclick="printBOL(${bol.id})">Print</button>`
-                ]).draw(false).node();
-                $(rowNode).attr('data-index', bolTable.rows().count() - 1);
-            }
-
-            window.editBOL = function(id) {
-                const row = bolTable.row((index, data, node) => {
-                    return data[0] == id; // Match by ID
-                });
-                const rowData = row.data();
-                editIndex = row.index();
-                $('#senderName').val(rowData[1]);
-                $('#receiverName').val(rowData[2]);
-                $('#description').val(rowData[3]);
-                $('#quantity').val(rowData[4]);
-                $('#weight').val(rowData[5]);
-                $('#route').val(rowData[6]);
-            }
-
-            function updateBOL(index, bol) {
-                bolTable.row(index).data([
-                    bol.id,
-                    bol.sender,
-                    bol.receiver,
-                    bol.description,
-                    bol.quantity,
-                    bol.weight,
-                    bol.route,
-                    `<button class="btn btn-warning btn-sm" onclick="editBOL(${bol.id})">Edit</button>
-                     <button class="btn btn-danger btn-sm" onclick="deleteBOL(${bol.id})">Hapus</button>
-                     <button class="btn btn-success btn-sm" onclick="printBOL(${bol.id})">Print</button>`
-                ]).draw(false);
-                updateLocalStorage();
-                editIndex = -1;
-            }
-
-            window.deleteBOL = function(id) {
-                bolTable.rows((index, data) => {
-                    return data[0] == id; // Match by ID
-                }).remove().draw();
-                updateLocalStorage();
-            }
-
-            function updateLocalStorage() {
-                const bolList = [];
-                $('#bolTable tbody tr').each(function() {
-                    const row = $(this).children('td');
-                    const bol = {
-                        id: row[0].innerText,
-                        sender: row[1].innerText,
-                        receiver: row[2].innerText,
-                        description: row[3].innerText,
-                        quantity: row[4].innerText,
-                        weight: row[5].innerText,
-                        route: row[6].innerText
-                    };
-                    bolList.push(bol);
-                });
-                localStorage.setItem('bolList', JSON.stringify(bolList));
-            }
-
-            function getBOLFromLocalStorage() {
-                return JSON.parse(localStorage.getItem('bolList')) || [];
-            }
-
-            function clearInputs() {
-                $('#senderName').val('');
-                $('#receiverName').val('');
-                $('#description').val('');
-                $('#quantity').val('');
-                $('#weight').val('');
-                $('#route').val('');
-            }
-
-            function loadBOLFromLocalStorage() {
-                const bolList = getBOLFromLocalStorage();
-                bolList.forEach(bol => {
-                    addBOLToTable(bol);
-                });
-                nextId = bolList.length ? Math.max(...bolList.map(b => b.id)) + 1 : 1; // Update next ID
-            }
-
-        window.printBOL = function(id) {
-    const bol = getBOLFromLocalStorage().find(b => b.id == id);
-    if (bol) {
-        // Generate QR Code URL (you may need a library for QR code generation)
-        const qrCodeURL = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(JSON.stringify(bol))}&size=100x100`;
-
-        let printContent = `
-        <div style="text-align: center; font-family: Arial, sans-serif; font-size: 14px; border: 1px solid #ccc; padding: 20px; width: 300px; margin: auto;">
-            <h2 style="margin-bottom: 10px;">Bill of Lading</h2>
-            <hr>
-            <p><strong>ID:</strong> ${bol.id}</p>
-            <p><strong>Pengirim:</strong> ${bol.sender}</p>
-            <p><strong>Penerima:</strong> ${bol.receiver}</p>
-            <p><strong>Deskripsi Barang:</strong> ${bol.description}</p>
-            <p><strong>Jumlah:</strong> ${bol.quantity}</p>
-            <p><strong>Berat:</strong> ${bol.weight} kg</p>
-            <p><strong>Rute Pengiriman:</strong> ${bol.route}</p>
-            <hr>
-            <img src="${qrCodeURL}" alt="QR Code" style="margin: 10px 0;">
-            <p style="font-size: 12px;">Tanggal: ${new Date().toLocaleDateString()}</p>
-            <p style="font-size: 12px;">Waktu: ${new Date().toLocaleTimeString()}</p>
-            <p style="font-size: 12px;">Terima kasih telah menggunakan layanan kami!</p>
-        </div>`;
-
-        const win = window.open('', '', 'width=350,height=400');
-        win.document.write(printContent);
-        win.document.close();
-        win.print();
-    }
-            }
+        // Menangani pengiriman formulir
+        document.getElementById('tankForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            saveData();
+            this.reset(); // Reset formulir
         });
+
+        // Fungsi untuk menghitung jarak antara dua titik
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Jari-jari bumi dalam km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; // Jarak dalam km
+        }
+
+        // Fungsi untuk memperbarui informasi lokasi
+        function updateLocation(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const locationInfo = document.getElementById('locationInfo');
+            locationInfo.textContent = `Latitude: ${latitude.toFixed(5)}, Longitude: ${longitude.toFixed(5)}`;
+
+            if (lastPosition) {
+                const distance = calculateDistance(lastPosition.latitude, lastPosition.longitude, latitude, longitude);
+                totalDistance += distance;
+
+                const distanceInfo = document.getElementById('distanceInfo');
+                distanceInfo.textContent = `Jarak Ditempuh: ${totalDistance.toFixed(2)} km`;
+
+                // Hitung kecepatan (km/jam)
+                const timeDiff = (position.timestamp - lastPosition.timestamp) / 1000; // dalam detik
+                const speed = (distance / timeDiff) * 3600; // kecepatan dalam km/jam
+                const speedInfo = document.getElementById('speedInfo');
+                speedInfo.textContent = `Kecepatan: ${speed.toFixed(2)} km/jam`;
+            }
+
+            lastPosition = { latitude, longitude, timestamp: position.timestamp };
+        }
+
+        // Fungsi untuk mulai melacak lokasi
+        function startTracking() {
+            if (navigator.geolocation) {
+                watchId = navigator.geolocation.watchPosition(updateLocation, (error) => {
+                    console.error(error);
+                }, {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 10000
+                });
+            } else {
+                alert("Geolocation tidak didukung oleh browser ini.");
+            }
+        }
+
+        // Fungsi untuk menghentikan pelacakan lokasi
+        function stopTracking() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+                lastPosition = null;
+                totalDistance = 0;
+                document.getElementById('locationInfo').textContent = "Pelacakan dihentikan.";
+                document.getElementById('distanceInfo').textContent = "Jarak Ditempuh: 0 km";
+                document.getElementById('speedInfo').textContent = "Kecepatan: 0 km/jam";
+            }
+        }
+
+        // Tampilkan data saat halaman dimuat
+        window.onload = displayData;
     </script>
 </body>
 </html>
